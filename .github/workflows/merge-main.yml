@@ -41,14 +41,14 @@ jobs:
           echo "Latest version branch found: $LATEST_BRANCH"
 
           # Checkout the latest version branch
-          git checkout "$LATEST_BRANCH"
+          git checkout -B "$LATEST_BRANCH" origin/"$LATEST_BRANCH"
 
           # Merge origin/main into the branch with --ff flag
           echo "Merging origin/main into $LATEST_BRANCH..."
           git merge origin/main --ff
 
           # Push the updated branch back to origin
-          git push origin "$LATEST_BRANCH"
+          git push origin refs/heads/"$LATEST_BRANCH"
 
           # Trigger the release workflow build for this updated branch
           echo "Triggering release workflow for branch: $LATEST_BRANCH"

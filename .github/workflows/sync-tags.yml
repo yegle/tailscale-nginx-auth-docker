@@ -73,7 +73,7 @@ jobs:
             # Ensure we are on a clean main state
             git checkout main
             git checkout -b "$tag" origin/main
-            git push origin "$tag"
+            git push origin refs/heads/"$tag"
             
             # Explicitly trigger the release workflow on this branch using GitHub CLI
             echo "Triggering release workflow for branch: $tag"
