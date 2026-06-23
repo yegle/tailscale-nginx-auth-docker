@@ -23,57 +23,60 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Sync new tags
+      - name: Sync new tags to branches
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Fetch all local tags to ensure we have the complete list
-          git fetch --tags origin
+          # Fetch all remote branches
+          git fetch --all
 
           # Get Tailscale tags matching vX.Y.Z
           REMOTE_TAGS=$(git ls-remote --tags https://github.com/tailscale/tailscale.git 'refs/tags/v*' | awk '{print $2}' | grep -v '\^{}' | sed 's|refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
 
-          # Get local tags
-          LOCAL_TAGS=$(git tag -l)
+          # Get existing remote branch names matching v*
+          EXISTING_BRANCHES=$(git branch -r | grep 'origin/v' | sed 's|  origin/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
 
-          # Find tags present in remote but missing locally, and >= v1.100.0
+          # Find versions present in remote Tailscale tags but missing as branches in our repo
           MIN_VERSION="v1.100.0"
-          NEW_TAGS=()
+          NEW_BRANCHES=()
           for tag in $REMOTE_TAGS; do
             # Compare version strings using sort -V (match tags >= MIN_VERSION)
             if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | head -n1)" = "$MIN_VERSION" ]; then
-              if ! echo "$LOCAL_TAGS" | grep -qx "$tag"; then
-                NEW_TAGS+=("$tag")
+              if ! echo "$EXISTING_BRANCHES" | grep -qx "$tag"; then
+                NEW_BRANCHES+=("$tag")
               fi
             fi
           done
 
-          if [ ${#NEW_TAGS[@]} -eq 0 ]; then
-            echo "No new tags to sync."
+          if [ ${#NEW_BRANCHES[@]} -eq 0 ]; then
+            echo "No new version branches to sync."
             exit 0
           fi
 
-          # Sort the new tags in ascending version order
-          IFS=$'\n' SORTED_TAGS=($(sort -V <<<"${NEW_TAGS[*]}"))
+          # Sort the new branches in ascending version order
+          IFS=$'\n' SORTED_BRANCHES=($(sort -V <<<"${NEW_BRANCHES[*]}"))
           unset IFS
 
-          echo "Found new tags: ${SORTED_TAGS[*]}"
+          echo "Found new version branches to create: ${SORTED_BRANCHES[*]}"
 
-          # Limit to syncing at most 3 tags per run to avoid workflow overload
+          # Limit to syncing at most 3 version branches per run to avoid workflow overload
           LIMIT=3
           COUNT=0
 
-          for tag in "${SORTED_TAGS[@]}"; do
+          for tag in "${SORTED_BRANCHES[@]}"; do
             if [ "$COUNT" -ge "$LIMIT" ]; then
-              echo "Reached limit of $LIMIT tags synced in this run."
+              echo "Reached limit of $LIMIT branches synced in this run."
               break
             fi
-            echo "Creating and pushing tag: $tag"
-            git tag "$tag"
+            echo "Creating and pushing branch: $tag"
+            
+            # Ensure we are on a clean main state
+            git checkout main
+            git checkout -b "$tag" origin/main
             git push origin "$tag"
             
-            # Explicitly trigger the release workflow on this tag using GitHub CLI
-            echo "Triggering release workflow for tag: $tag"
+            # Explicitly trigger the release workflow on this branch using GitHub CLI
+            echo "Triggering release workflow for branch: $tag"
             gh workflow run release.yml --ref "$tag"
             
             COUNT=$((COUNT + 1))
