@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM golang:1.23 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23 AS builder
 
 # Install git
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
@@ -13,8 +13,12 @@ WORKDIR /src
 RUN git clone --depth 1 --branch ${TAILSCALE_VERSION} https://github.com/tailscale/tailscale.git . || \
     (git clone https://github.com/tailscale/tailscale.git . && git checkout ${TAILSCALE_VERSION})
 
-# Build the nginx-auth binary
-RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /app/nginx-auth ./cmd/nginx-auth
+# Cross-compilation variables automatically set by Docker Buildx
+ARG TARGETOS
+ARG TARGETARCH
+
+# Build the nginx-auth binary for the target architecture
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-s -w" -o /app/nginx-auth ./cmd/nginx-auth
 
 # Stage 2: Runtime
 # Use Google's distroless static image, which contains ca-certificates, passwd, tzdata, etc.
