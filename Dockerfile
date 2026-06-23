@@ -17,8 +17,10 @@ RUN git clone --depth 1 --branch ${TAILSCALE_VERSION} https://github.com/tailsca
 ARG TARGETOS
 ARG TARGETARCH
 
-# Build the nginx-auth binary for the target architecture
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-s -w" -o /app/nginx-auth ./cmd/nginx-auth
+# Build the nginx-auth binary for the target architecture with cache mounts
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-s -w" -o /app/nginx-auth ./cmd/nginx-auth
 
 # Stage 2: Runtime
 # Use Google's distroless static image, which contains ca-certificates, passwd, tzdata, etc.
