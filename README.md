@@ -9,7 +9,7 @@ This repository automates the compilation, packaging, and distribution of Tailsc
 ## Container Features
 
 - **Multi-Architecture**: Built and published for both `linux/amd64` and `linux/arm64`.
-- **Fast Build Times**: Uses native cross-compilation within the Docker builder stage to bypass slow QEMU emulation.
+- **Fast Build Times**: Uses native cross-compilation within the Docker builder stage with Buildx cache mounts (`--mount=type=cache`) to bypass slow QEMU emulation and speed up Go package downloads and compilation.
 - **Secure and Minimal**: Uses Google's Distroless static base image (`gcr.io/distroless/static-debian12`), which contains only the essential OCI/SSL configurations and no shell or unnecessary packages.
 - **Volume socket support**:
   - The container expects the Tailscale local daemon socket to be mounted at `/tailscale.sock`.
@@ -17,15 +17,20 @@ This repository automates the compilation, packaging, and distribution of Tailsc
 
 ## CI/CD Automation
 
-This repository includes two GitHub Action workflows:
+This repository includes three GitHub Action workflows:
 
 1. **Build and Release** (`release.yml`):
-   - Triggered on tag push matching `v*`.
-   - Generates OCI metadata and tags.
+   - Triggered on branch pushes matching `v*`.
+   - Generates OCI compliant metadata and tags matching the version branch name.
    - Leverages GitHub Actions caching (`type=gha`) for incremental build speed.
-   - Pushes build artifacts to GitHub Container Registry (GHCR) as `ghcr.io/yegle/tailscale-nginx-auth:<version>` and `ghcr.io/yegle/tailscale-nginx-auth:latest`.
+   - Pushes build artifacts to GitHub Container Registry (GHCR) as `ghcr.io/yegle/tailscale-nginx-auth-docker:<version>` and `ghcr.io/yegle/tailscale-nginx-auth-docker:latest`.
 
 2. **Upstream Tag Sync** (`sync-tags.yml`):
    - Runs on a nightly schedule (cron) and can be run manually.
-   - Checks the upstream `tailscale/tailscale` repository for new release tags.
-   - Automatically tags and pushes matching versions to this repository, triggering the release workflow.
+   - Checks the upstream `tailscale/tailscale` repository for new release tags (starting from `v1.100.0`).
+   - Automatically creates a new branch from `main` for every new version and pushes it to trigger the release workflow.
+
+3. **Merge Main into Latest** (`merge-main.yml`):
+   - Triggered automatically on every new push/commit to the `main` branch.
+   - Identifies the latest version branch (e.g. `v1.100.0`).
+   - Creates a merge commit to bring changes from `main` into it (using `--ff` fast-forward) and pushes it to trigger a fresh release build.
