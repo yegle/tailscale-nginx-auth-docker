@@ -1,0 +1,68 @@
+name: Sync Tailscale Tags
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync new tags
+        run: |
+          # Fetch all local tags to ensure we have the complete list
+          git fetch --tags origin
+
+          # Get Tailscale tags matching vX.Y.Z
+          REMOTE_TAGS=$(git ls-remote --tags https://github.com/tailscale/tailscale.git 'refs/tags/v*' | awk '{print $2}' | grep -v '\^{}' | sed 's|refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
+
+          # Get local tags
+          LOCAL_TAGS=$(git tag -l)
+
+          # Find tags present in remote but missing locally
+          NEW_TAGS=()
+          for tag in $REMOTE_TAGS; do
+            if ! echo "$LOCAL_TAGS" | grep -qx "$tag"; then
+              NEW_TAGS+=("$tag")
+            fi
+          done
+
+          if [ ${#NEW_TAGS[@]} -eq 0 ]; then
+            echo "No new tags to sync."
+            exit 0
+          fi
+
+          # Sort the new tags in ascending version order
+          IFS=$'\n' SORTED_TAGS=($(sort -V <<<"${NEW_TAGS[*]}"))
+          unset IFS
+
+          echo "Found new tags: ${SORTED_TAGS[*]}"
+
+          # Limit to syncing at most 3 tags per run to avoid workflow overload
+          LIMIT=3
+          COUNT=0
+
+          for tag in "${SORTED_TAGS[@]}"; do
+            if [ "$COUNT" -ge "$LIMIT" ]; then
+              echo "Reached limit of $LIMIT tags synced in this run."
+              break
+            fi
+            echo "Creating and pushing tag: $tag"
+            git tag "$tag"
+            git push origin "$tag"
+            COUNT=$((COUNT + 1))
+          done
