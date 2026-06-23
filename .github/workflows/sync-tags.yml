@@ -36,12 +36,12 @@ jobs:
           # Get local tags
           LOCAL_TAGS=$(git tag -l)
 
-          # Find tags present in remote but missing locally, and strictly newer than v1.100.0
+          # Find tags present in remote but missing locally, and >= v1.100.0
           MIN_VERSION="v1.100.0"
           NEW_TAGS=()
           for tag in $REMOTE_TAGS; do
-            # Compare version strings using sort -V
-            if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | head -n1)" = "$MIN_VERSION" ] && [ "$tag" != "$MIN_VERSION" ]; then
+            # Compare version strings using sort -V (match tags >= MIN_VERSION)
+            if [ "$(printf '%s\n%s' "$MIN_VERSION" "$tag" | sort -V | head -n1)" = "$MIN_VERSION" ]; then
               if ! echo "$LOCAL_TAGS" | grep -qx "$tag"; then
                 NEW_TAGS+=("$tag")
               fi
