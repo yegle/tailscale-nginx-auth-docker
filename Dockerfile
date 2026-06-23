@@ -35,6 +35,5 @@ VOLUME ["/tailscale.sock"]
 # Configure Tailscale client to use the socket at /tailscale.sock
 ENV TS_SOCKET=/tailscale.sock
 
-# Set the ENTRYPOINT to the binary in the root folder
-ENTRYPOINT ["/nginx-auth"]
-CMD ["-sockpath", "/tmp/nginx-auth.sock"]
+# Set the CMD to the binary in the root folder with default socket path
+CMD ["/nginx-auth", "-sockpath", "/tmp/nginx-auth.sock"]
