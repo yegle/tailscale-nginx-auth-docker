@@ -37,3 +37,4 @@ ENV TS_SOCKET=/tailscale.sock
 
 # Set the ENTRYPOINT to the binary in the root folder
 ENTRYPOINT ["/nginx-auth"]
+CMD ["-sockpath", "/tmp/nginx-auth.sock"]

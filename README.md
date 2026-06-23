@@ -32,5 +32,30 @@ This repository includes three GitHub Action workflows:
 
 3. **Merge Main into Latest** (`merge-main.yml`):
    - Triggered automatically on every new push/commit to the `main` branch.
-   - Identifies the latest version branch (e.g. `v1.100.0`).
+   - Identifies the latest version branch (e.g. <!-- LATEST_VERSION -->v1.100.0<!-- /LATEST_VERSION -->).
    - Creates a merge commit to bring changes from `main` into it (using `--ff` fast-forward) and pushes it to trigger a fresh release build.
+
+## Usage
+
+You can run the `nginx-auth` container by mounting your Tailscale socket:
+
+```bash
+docker run -d \
+  --name tailscale-nginx-auth \
+  -v /var/run/tailscale/tailscaled.sock:/tailscale.sock \
+  -v /tmp:/tmp \
+  ghcr.io/yegle/tailscale-nginx-auth-docker:<!-- LATEST_VERSION -->v1.100.0<!-- /LATEST_VERSION -->
+```
+
+By default, the container listens on the Unix socket at `/tmp/nginx-auth.sock` (corresponding to the `-v /tmp:/tmp` mount). You can configure your Nginx server to use this socket for Tailscale authentication.
+
+If you wish to customize the socket location inside the container, you can pass the `-sockpath` argument:
+
+```bash
+docker run -d \
+  --name tailscale-nginx-auth \
+  -v /var/run/tailscale/tailscaled.sock:/tailscale.sock \
+  -v /var/run/tailscale-nginx-auth:/var/run/tailscale-nginx-auth \
+  ghcr.io/yegle/tailscale-nginx-auth-docker:<!-- LATEST_VERSION -->v1.100.0<!-- /LATEST_VERSION --> \
+  -sockpath /var/run/tailscale-nginx-auth/nginx-auth.sock
+```

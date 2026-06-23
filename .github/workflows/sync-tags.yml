@@ -81,3 +81,20 @@ jobs:
             
             COUNT=$((COUNT + 1))
           done
+
+          # Auto-update README.md with the latest version branch on main
+          ALL_BRANCHES=$(git branch -r | grep 'origin/v' | sed 's|  origin/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+          LATEST_VERSION=$(echo "$ALL_BRANCHES" | sort -V | tail -n1 || true)
+          if [ -n "$LATEST_VERSION" ]; then
+            echo "Latest version branch: $LATEST_VERSION"
+            git checkout main
+            sed -i -E "s|<!-- LATEST_VERSION -->v[0-9]+\.[0-9]+\.[0-9]+<!-- /LATEST_VERSION -->|<!-- LATEST_VERSION -->${LATEST_VERSION}<!-- /LATEST_VERSION -->|g" README.md
+            if ! git diff --quiet README.md; then
+              echo "README.md is out of date. Committing and pushing changes..."
+              git add README.md
+              git commit -m "Auto-update README.md with latest version $LATEST_VERSION"
+              git push origin refs/heads/main
+            else
+              echo "README.md is already up to date."
+            fi
+          fi
