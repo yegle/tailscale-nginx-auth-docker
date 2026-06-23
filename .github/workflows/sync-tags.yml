@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync:
@@ -23,6 +24,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Sync new tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Fetch all local tags to ensure we have the complete list
           git fetch --tags origin
@@ -64,5 +67,10 @@ jobs:
             echo "Creating and pushing tag: $tag"
             git tag "$tag"
             git push origin "$tag"
+            
+            # Explicitly trigger the release workflow on this tag using GitHub CLI
+            echo "Triggering release workflow for tag: $tag"
+            gh workflow run release.yml --ref "$tag"
+            
             COUNT=$((COUNT + 1))
           done
