@@ -30,8 +30,8 @@ jobs:
           # Fetch all remote branches
           git fetch --all
 
-          # Find the latest version branch (highest semver vX.Y.Z)
-          LATEST_BRANCH=$(git branch -r | grep 'origin/v' | sed 's|  origin/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+          # Find the latest version branch (highest semver vX.Y.Z) (append || true to prevent set -e crash if empty)
+          LATEST_BRANCH=$(git branch -r | grep 'origin/v' | sed 's|  origin/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
 
           if [ -z "$LATEST_BRANCH" ]; then
             echo "No version branches found to merge into."
