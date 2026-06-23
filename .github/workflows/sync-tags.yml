@@ -71,7 +71,7 @@ jobs:
             echo "Creating and pushing branch: $tag"
             
             # Ensure we are on a clean main state
-            git checkout main
+            git checkout -B main origin/main
             git checkout -b "$tag" origin/main
             git push origin refs/heads/"$tag"
             
@@ -83,11 +83,12 @@ jobs:
           done
 
           # Auto-update README.md with the latest version branch on main
+          git fetch origin
           ALL_BRANCHES=$(git branch -r | grep 'origin/v' | sed 's|  origin/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
           LATEST_VERSION=$(echo "$ALL_BRANCHES" | sort -V | tail -n1 || true)
           if [ -n "$LATEST_VERSION" ]; then
             echo "Latest version branch: $LATEST_VERSION"
-            git checkout main
+            git checkout -B main origin/main
             sed -i -E "s|<!-- LATEST_VERSION -->v[0-9]+\.[0-9]+\.[0-9]+<!-- /LATEST_VERSION -->|<!-- LATEST_VERSION -->${LATEST_VERSION}<!-- /LATEST_VERSION -->|g" README.md
             if ! git diff --quiet README.md; then
               echo "README.md is out of date. Committing and pushing changes..."
